@@ -27,7 +27,7 @@
 
 #ifndef			APP_BOOTLOADER
 	#define			MIN_ADDRESS			0x8000000
-	#define			MAX_ADDRESS			0x8006000
+	#define			MAX_ADDRESS			0x8008000
 	#define			PROG_STATUS			0x0A
 	#define			USER_STATUS			0xB0
 	#define			PROG_VAL_FLAG		0xBA

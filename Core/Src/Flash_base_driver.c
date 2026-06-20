@@ -7,7 +7,7 @@
 
 #include "Flash_base_driver.h"
 
-extern uint32_t STATUSB_ADDR;
+//extern uint32_t STATUSB_ADDR;
 
 
 /******************* function to write data to EEPROM ********************
@@ -169,41 +169,13 @@ char writeToEEPROM (uint32_t address, uint64_t  * value, int len, uint16_t timeo
  */
 char eraseFlash(uint32_t address, uint8_t pages, uint16_t timeout)
 {
-#ifdef		STM32L4
-	//return HAL_ERROR;
-	if(address>=MIN_ADDRESS && address<MAX_ADDRESS)
-		return HAL_ERROR;
-	uint32_t tickStart=getTick();
-	HAL_StatusTypeDef flash_ok = HAL_ERROR;
-	FLASH_EraseInitTypeDef config;
-	config.TypeErase=FLASH_TYPEERASE_PAGES;
-	config.Page=(address-0x8000000)/2048;
-	config.Banks= FLASH_BANK_1;
-	config.NbPages=pages;
-	uint32_t erase_status=0;
-
-	flashUnlock(timeout);
-	tickStart=getTick();
-	while (flash_ok != HAL_OK)
-	{
-		//LOGS("E\n",2);
-		if((getTick()-tickStart) >timeout)
-			 return HAL_TIMEOUT;
-		flash_ok =  HAL_FLASHEx_Erase(&config, &erase_status);
-	}
-	flashLock(timeout);
-
-	return HAL_OK;
-#elif	defined(STM32F0)
-
-#elif	defined(STM32G0) || defined(STM32C0)
 	//LOGS("ME\n", 3);
-	//return HAL_ERROR;
+//	return HAL_ERROR;
 #ifdef			APP_BOOTLOADER
 	if(address>=MIN_ADDRESS && address<MAX_ADDRESS ||(address>=STATUSB_ADDR && pages>1))
 		return HAL_ERROR;
 #else
-	if(/*address>=MIN_ADDRESS && */address<MAX_ADDRESS ||(address>=STATUSB_ADDR && pages>1))
+	if(/*address>=MIN_ADDRESS && */address<MAX_ADDRESS)
 		return HAL_ERROR;
 #endif
 	uint32_t tickStart=getTick();
@@ -211,9 +183,16 @@ char eraseFlash(uint32_t address, uint8_t pages, uint16_t timeout)
 	FLASH_EraseInitTypeDef config;
 	config.TypeErase = FLASH_TYPEERASE_PAGES;
 	config.Page=(address-0x8000000)/2048;
-//	config.Banks= FLASH_BANK_1;
+	config.Banks= FLASH_BANK_1;
 	config.NbPages=pages;
 	uint32_t erase_status=0;
+
+	__HAL_FLASH_CLEAR_FLAG(
+		  FLASH_FLAG_OPTVERR |
+	      FLASH_FLAG_PGAERR  |
+	      FLASH_FLAG_PGSERR  |
+	      FLASH_FLAG_WRPERR  |
+	      FLASH_FLAG_PROGERR);
 
 //	LOGIS(config.NbPages, 10);
 //	LOGIN(pages, 10);
@@ -221,10 +200,10 @@ char eraseFlash(uint32_t address, uint8_t pages, uint16_t timeout)
 //	LOGIS(config.Page, 10);
 //	LOGIN(address, 10);
 
-	if((address + ((config.NbPages-1) * 2048))>=STATUSB_ADDR && pages>1)
-	{
-		return HAL_ERROR;
-	}
+//	if((address + ((config.NbPages-1) * 2048))>=STATUSB_ADDR && pages>1)
+//	{
+//		return HAL_ERROR;
+//	}
 
 
 	uint8_t extraFlag = 0;
@@ -246,10 +225,18 @@ char eraseFlash(uint32_t address, uint8_t pages, uint16_t timeout)
 //	}
 
 
+
+
 //	LOGIS(config.Banks, 10);
 //	LOGIS(config.NbPages, 10);
 //	LOGIN(config.Page, 10);
-	flashUnlock(timeout);
+	if (flashUnlock(timeout)!=HAL_OK)
+	{
+		//LOGS("FU\n", 3);
+		return HAL_ERROR;
+	}
+
+	FLASH_PageErase(16, 0);
 	tickStart=getTick();
 	while (flash_ok != HAL_OK)
 	{
@@ -259,6 +246,10 @@ char eraseFlash(uint32_t address, uint8_t pages, uint16_t timeout)
 			 return HAL_TIMEOUT;
 		flash_ok =  HAL_FLASHEx_Erase(&config, &erase_status);
 	}
+//	LOGIN(erase_status, 16);
+
+	if(erase_status!=0xFFFFFFFF)
+		return HAL_ERROR;
 
 //	if(extraFlag)
 //	{
@@ -275,11 +266,7 @@ char eraseFlash(uint32_t address, uint8_t pages, uint16_t timeout)
 //		}
 //	}
 	flashLock(timeout);
-
 	return HAL_OK;
-#elif	defined(MM32F1)
-
-#endif
 }
 /******************* End of reaseFlash function *****************/
 
@@ -290,19 +277,6 @@ char eraseFlash(uint32_t address, uint8_t pages, uint16_t timeout)
  */
 char flashLock(uint16_t timeout)
 {
-#ifdef		STM32L4
-	HAL_StatusTypeDef flash_ok = HAL_ERROR;
-	uint32_t tickStart=getTick();
-	while (flash_ok != HAL_OK)
-	{
-	if((getTick()-tickStart) >timeout)
-		return HAL_TIMEOUT;
-		flash_ok = HAL_FLASH_Lock ();
-	}
-	return flash_ok;
-#elif		defined(STM32F0)
-
-#elif		defined(STM32G0) || defined(STM32C0)
 	HAL_StatusTypeDef flash_ok = HAL_ERROR;
 	uint32_t tickStart=getTick();
 	while (flash_ok != HAL_OK)
@@ -312,9 +286,6 @@ char flashLock(uint16_t timeout)
 		flash_ok = HAL_FLASH_Lock ();
 	}
 	return flash_ok;
-#elif		defined(MM32F1)
-
-#endif
 }
 /************ End of flashLock() Function ********************/
 
@@ -325,19 +296,6 @@ char flashLock(uint16_t timeout)
  */
 char flashUnlock(uint16_t timeout)
 {
-#ifdef		STM32L4
-	HAL_StatusTypeDef flash_ok = HAL_ERROR;
-	uint32_t tickStart = getTick();
-	while (flash_ok != HAL_OK)
-	{
-	if((getTick()-tickStart) >timeout)
-		return HAL_TIMEOUT;
-		flash_ok = HAL_FLASH_Unlock ();
-	}
-	return flash_ok;
-#elif		defined(STM32F0)
-
-#elif		defined(STM32G0) || defined(STM32C0)
 	HAL_StatusTypeDef flash_ok = HAL_ERROR;
 	uint32_t tickStart = getTick();
 	while (flash_ok != HAL_OK)
@@ -347,8 +305,5 @@ char flashUnlock(uint16_t timeout)
 		flash_ok = HAL_FLASH_Unlock ();
 	}
 	return flash_ok;
-#elif		defined(MM32F1)
-
-#endif
 }
 /********** End of flashUnlock() function **************/

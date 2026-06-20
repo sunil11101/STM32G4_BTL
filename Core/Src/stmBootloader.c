@@ -201,38 +201,27 @@ char eraseFlashUart(uint16_t timeout)
 	char buffer[10]={0};
 	char status;
 
-	status=uartReceive(buffer, 5, 1500);
+	status=uartReceive(buffer, 6, 1500);
 	if(status==HAL_OK)
 	{
 		uint8_t crc=buffer[0];
 		uint32_t address=buffer[0] | (uint32_t)buffer[1]<<8 | (uint32_t)buffer[2]<<16|
 						(uint32_t)buffer[3]<<24;
-		if(checkCRC(buffer, 5))
+		uint8_t size = buffer[4];
+		if(checkCRC(buffer, 6))
 		{
+//			LOGIN(address, 16);
+//			LOGIN(size, 10);
 			sendAck();
-			status= uartReceive(buffer, 2, 2000);
-			if(status!=HAL_OK)
-			{
-				sendNack();
-				return HAL_TIMEOUT;
-			}
-			uint8_t size=buffer[0];
-			if(checkCRC(buffer, 2))
+			if(eraseFlash(address, size, timeout)==HAL_OK)
 			{
 				sendAck();
-				if(eraseFlash(address, size, timeout)==HAL_OK)
-				{
-					sendAck();
-				}
-				else
-				{
-					sendNack();
-				}
 			}
 			else
 			{
 				sendNack();
 			}
+
 		}
 		else
 		{
@@ -261,24 +250,24 @@ char valFlash(uint32_t startAddr, uint32_t endAddr)
 	uint32_t address;
 
 	// initilize crc hardware
-	//HAL_CRC_Init(&hcrc);
+	HAL_CRC_Init(&hcrc);
 	//hcrc.Instance->DR=0;
-	crcDeinit();
-	crcInit();
+//	crcDeinit();
+//	crcInit();
 	for(address=startAddr;address<endAddr;address+=4)
 	{
 		tempData=(uint32_t *)((__IO uint32_t *) address);
-		//HAL_CRC_Accumulate(&hcrc, tempData, 1);
-		crcAccumulate(tempData, 1);
+		HAL_CRC_Accumulate(&hcrc, tempData, 1);
+//		crcAccumulate(tempData, 1);
 	}
 
 	tempData=(uint32_t *)((__IO uint32_t *) address);
-	//crcResult=HAL_CRC_Accumulate(&hcrc, tempData, 1);
-	crcResult = crcAccumulate(tempData, 1);
+	crcResult=HAL_CRC_Accumulate(&hcrc, tempData, 1);
+//	crcResult = crcAccumulate(tempData, 1);
 
 	// stop crc hardware
-	//HAL_CRC_DeInit(&hcrc);
-	crcDeinit();
+	HAL_CRC_DeInit(&hcrc);
+//	crcDeinit();
 	if(crcResult==0)
 		return 1;
 	else
@@ -303,10 +292,17 @@ char valFlashSearch(uint32_t startAddr, uint32_t * endAddr)
 	// initilize crc hardware
 	HAL_CRC_Init(&hcrc);
 	//hcrc.Instance->DR=0;
-	for(address=startAddr;address<0x0807C000;address+=4)
+	tempData=(uint32_t *)((__IO uint32_t *) startAddr);
+//	LOGIN(*tempData, 16);
+	if(*tempData==0xFFFFFFFF)
+	{
+		return 0;
+	}
+	for(address=startAddr;address<0x0801F000;address+=4)
 	{
 		tempData=(uint32_t *)((__IO uint32_t *) address);
 		crcResult = HAL_CRC_Accumulate(&hcrc, tempData, 1);
+//		LOGIN(address, 16);
 		if(crcResult==0)
 		{
 			*endAddr=address;
@@ -428,6 +424,7 @@ char checkCRC(uint8_t *pBuffer, uint32_t len)
     }
 
     //result ^= 0xFF;
+//    LOGIN(result, 16);
 
     if(result == 0x00)
     {
@@ -457,7 +454,10 @@ char uploadProg(uint32_t address, char * buffer, uint8_t len)
 	AES_CBC_decrypt_buffer(&ctx, buffer, len);
 
 	if(flashUnlock(2000)!=HAL_OK)
+	{
+//		LOGS("FU\n", 3);
 		return HAL_ERROR;
+	}
 
 	HAL_StatusTypeDef flash_ok=HAL_ERROR;
 	uint32_t tickStart=HAL_GetTick();
@@ -472,7 +472,7 @@ char uploadProg(uint32_t address, char * buffer, uint8_t len)
 		//LOGIN(address+i, 16);
 		if(status!=HAL_OK)
 		{
-			//LOGS("ER\n", 3);
+			LOGS("ER\n", 3);
 			flashLock(2000);
 			return status;
 		}
@@ -493,7 +493,10 @@ char uploadProg(uint32_t address, char * buffer, uint8_t len)
 			return HAL_ERROR;
 	}
 	if(flashLock(2000)!=HAL_OK)
+	{
+		LOGS("FL\n", 3);
 		return HAL_ERROR;
+	}
 	return HAL_OK;
 }
 /**************** End of uploadProg function ******************************/
@@ -512,42 +515,28 @@ char uploadProgUart()
 	char status;
 
 	// Read starting address
-	status=uartReceive(buffer, 5, 1500);
+	status=uartReceive(buffer, 6, 1500);
 	if(status==HAL_OK)
 	{
 		uint8_t crc=buffer[0];
-		uint32_t address=buffer[3] | (uint32_t)buffer[0]<<8 | (uint32_t)buffer[2]<<16|
-						(uint32_t)buffer[1]<<24;
-		if(checkCRC(buffer, 5) && address % 4==0)
+		uint32_t address=buffer[0] | (uint32_t)buffer[1]<<8 | (uint32_t)buffer[2]<<16|
+						(uint32_t)buffer[3]<<24;
+		uint8_t len = buffer[4];
+		if(checkCRC(buffer, 6) && address % 4==0)
 		{
+//			LOGIN(address, 16);
 			sendAck();
-
-			status=uartReceive(buffer, 2, 2000);
+			status=uartReceive(buffer, len+1, 2000);
 			if(status!=HAL_OK)
-				return HAL_TIMEOUT;
-
-			// Update the application address
-			//bootStatus.appAddress=address;
-			//updateStatus(STATUS_ADDR, 2000);
-
-			uint8_t len=buffer[0];
-			if(checkCRC(buffer, 2))
 			{
-				sendAck();
-				status=uartReceive(buffer, len+1, 2000);
-				if(status!=HAL_OK)
-					return HAL_TIMEOUT;
-				if(checkCRC(buffer, len+1))
-				{
-					if(uploadProg(address, buffer, len)==HAL_OK)
-						sendAck();
-					else
-						sendNack();
-				}
+				return HAL_TIMEOUT;
+			}
+			if(checkCRC(buffer, len+1))
+			{
+				if(uploadProg(address, buffer, len)==HAL_OK)
+					sendAck();
 				else
-				{
 					sendNack();
-				}
 			}
 			else
 			{

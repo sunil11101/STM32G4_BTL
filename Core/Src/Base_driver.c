@@ -11,7 +11,7 @@
 
 	extern CRC_HandleTypeDef hcrc;
 	#define		HCRC		hcrc
-	extern IWDG_HandleTypeDef hiwdg;
+//	extern IWDG_HandleTypeDef hiwdg;
 
 
 
@@ -90,16 +90,16 @@ void rstMcu()
 void crcInit()
 {
 
-	hcrc.Instance = CRC;
-	hcrc.Init.DefaultPolynomialUse = DEFAULT_POLYNOMIAL_ENABLE;
-	hcrc.Init.DefaultInitValueUse = DEFAULT_INIT_VALUE_ENABLE;
-	hcrc.Init.InputDataInversionMode = CRC_INPUTDATA_INVERSION_NONE;
-	hcrc.Init.OutputDataInversionMode = CRC_OUTPUTDATA_INVERSION_DISABLE;
-	hcrc.InputDataFormat = CRC_INPUTDATA_FORMAT_WORDS;
-	if (HAL_CRC_Init(&hcrc) != HAL_OK)
-	{
-	  Error_Handler();
-	}
+//	hcrc.Instance = CRC;
+//	hcrc.Init.DefaultPolynomialUse = DEFAULT_POLYNOMIAL_ENABLE;
+//	hcrc.Init.DefaultInitValueUse = DEFAULT_INIT_VALUE_ENABLE;
+//	hcrc.Init.InputDataInversionMode = CRC_INPUTDATA_INVERSION_NONE;
+//	hcrc.Init.OutputDataInversionMode = CRC_OUTPUTDATA_INVERSION_DISABLE;
+//	hcrc.InputDataFormat = CRC_INPUTDATA_FORMAT_WORDS;
+//	if (HAL_CRC_Init(&hcrc) != HAL_OK)
+//	{
+//	  Error_Handler();
+//	}
 }
 
 
@@ -109,7 +109,7 @@ void crcInit()
  */
 void crcDeinit()
 {
-	HAL_CRC_DeInit(&HCRC);
+//	HAL_CRC_DeInit(&HCRC);
 }
 
 
@@ -128,7 +128,7 @@ uint32_t crcAccumulate(uint32_t * data, uint8_t len)
  */
 void resetWatchdog()
 {
-	HAL_IWDG_Refresh(&hiwdg);
+//	HAL_IWDG_Refresh(&hiwdg);
 }
 
 

@@ -7,6 +7,7 @@
 	#include "stm32g4xx_hal.h"
 
 
-void jumpToApp(uint32_t address);
+//void jumpToApp(uint32_t address);
+void JumpToApplication(void);
 
 #endif
