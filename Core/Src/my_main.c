@@ -28,7 +28,7 @@ resetWatchdog();
 #ifdef			APP_BOOTLOADER
 	uartSend("bapp\n", 5,1000);
 #else
-	LOGS("a3\n", 3);
+	LOGS("b3\n", 3);
 #endif
 
 	char buffer[5]={0};
@@ -147,14 +147,14 @@ END:
 	}
 
 
-	LOGS("Sn\n", 3);
+//	LOGS("Sn\n", 3);
 	//LOGIN(bootStatus.status_b, 16);
 
 
 	uint32_t endAddr = 0;
 	if(valFlashSearch(APP_ADDR, &endAddr)==1)
 	{
-		LOGS("S2\n", 3);
+//		LOGS("S2\n", 3);
 	  if(endAddr>0x8007000)
 	  {
 //		  bootStatus.status_b|=PROG_STATUS;
